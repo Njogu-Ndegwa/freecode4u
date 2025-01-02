@@ -6,11 +6,12 @@ from rest_framework.response import Response
 from rest_framework.exceptions import PermissionDenied
 from django.shortcuts import get_object_or_404
 
-from .models import Manufacturer, Fleet
+from .models import Manufacturer, Fleet, EncoderState
 from .serializers import ManufacturerSerializer, FleetSerializer, Item, ItemSerializer
 from django.contrib.auth import get_user_model
 from django.core.exceptions import ObjectDoesNotExist
 from .models import Customer
+from django.db import transaction
 User = get_user_model()
 
 @api_view(['GET', 'POST'])
@@ -380,20 +381,140 @@ def reassign_fleets_view(request):
     return Response(response_data, status=status.HTTP_200_OK)
 
 
+# @api_view(['POST'])
+# @permission_classes([IsAuthenticated])
+# def create_item_view(request):
+#     """
+#     POST /items/create/
+#     {
+#       "serial_number": "XYZ123",
+#       "manufacturers": 1
+#       // Optionally "fleet_id" if you allow direct assignment
+#     }
+
+#     Only a DISTRIBUTOR can create an item.
+#     If you want to enforce that an item must belong to a fleet,
+#     you can accept a "fleet_id" here or have a separate function.
+#     """
+#     user = request.user
+
+#     # 1) Must be a distributor
+#     if user.user_type != 'DISTRIBUTOR':
+#         raise PermissionDenied("Only a Distributor can create items.")
+
+#     # 2) Validate incoming data
+#     serializer = ItemSerializer(data=request.data)
+#     serializer.is_valid(raise_exception=True)
+
+#     # If you want to allow direct linking to a fleet at creation:
+#     fleet_id = request.data.get('fleet_id')
+#     if fleet_id:
+#         fleet = get_object_or_404(Fleet, pk=fleet_id)
+#         # Ensure the fleet belongs to this distributor
+#         if fleet.distributor != user:
+#             raise PermissionDenied("You do not own this fleet.")
+#         # Save the item with the fleet
+#         item = Item.objects.create(
+#             serial_number=serializer.validated_data['serial_number'],
+#             fleet=fleet
+#         )
+#         # If you allow many-to-many manufacturers:
+#         item.manufacturers = serializer.validated_data.get('manufacturers')
+#         item.save()
+#     else:
+#         # If you allow creating an item without a fleet, do so:
+#         item = serializer.save()
+
+#     return Response(
+#         ItemSerializer(item).data,
+#         status=status.HTTP_201_CREATED
+#     )
+
+
+# @api_view(['POST'])
+# @permission_classes([IsAuthenticated])
+# def create_items_bulk_view(request):
+#     """
+#     POST /items/bulk_create/
+#     {
+#       "items": [
+#         {
+#           "serial_number": "SERIAL001",
+#           "fleet_id": 10,
+#           "manufacturers": 1
+#         },
+#         {
+#           "serial_number": "SERIAL002",
+#           "fleet_id": 10
+#         }
+#       ]
+#     }
+#     Only a DISTRIBUTOR can bulk create items.
+#     """
+#     user = request.user
+#     if user.user_type != 'DISTRIBUTOR':
+#         raise PermissionDenied("Only a Distributor can create items.")
+
+#     data = request.data.get('items', [])
+#     if not isinstance(data, list):
+#         return Response({"detail": "'items' must be a list."}, status=status.HTTP_400_BAD_REQUEST)
+
+#     created_items = []
+#     errors = []
+
+#     for idx, item_data in enumerate(data):
+#         # We can optionally pass partial data to our serializer
+#         serializer = ItemSerializer(data=item_data)
+#         if serializer.is_valid():
+#             fleet_id = item_data.get('fleet_id')
+#             if fleet_id:
+#                 fleet = get_object_or_404(Fleet, pk=fleet_id)
+#                 if fleet.distributor != user:
+#                     errors.append({
+#                         "index": idx,
+#                         "error": "You do not own fleet_id={}".format(fleet_id)
+#                     })
+#                     continue
+#                 item_obj = Item.objects.create(
+#                     serial_number=serializer.validated_data['serial_number'],
+#                     fleet=fleet
+#                 )
+#                 item_obj.manufacturers = serializer.validated_data.get('manufacturers')
+#                 item_obj.save()
+#             else:
+#                 # create item without fleet
+#                 item_obj = serializer.save()
+
+#             created_items.append(ItemSerializer(item_obj).data)
+#         else:
+#             errors.append({
+#                 "index": idx,
+#                 "error": serializer.errors
+#             })
+
+#     return Response({
+#         "created_items": created_items,
+#         "errors": errors
+#     }, status=status.HTTP_201_CREATED if created_items else status.HTTP_400_BAD_REQUEST)
+
+
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])
 def create_item_view(request):
     """
     POST /items/create/
     {
-      "serial_number": "XYZ123",
-      "manufacturers": 1
-      // Optionally "fleet_id" if you allow direct assignment
+        "serial_number": "XYZ123",
+        "manufacturers": 1,
+        "encoder_state": {
+            "token_type": "type1",
+            "token_value": "value1",
+            "secret_key": "key123",
+            "starting_code": "START001",
+            "max_count": 100,
+            "token": "token123"
+        }
     }
-
-    Only a DISTRIBUTOR can create an item.
-    If you want to enforce that an item must belong to a fleet,
-    you can accept a "fleet_id" here or have a separate function.
     """
     user = request.user
 
@@ -405,30 +526,36 @@ def create_item_view(request):
     serializer = ItemSerializer(data=request.data)
     serializer.is_valid(raise_exception=True)
 
-    # If you want to allow direct linking to a fleet at creation:
-    fleet_id = request.data.get('fleet_id')
-    if fleet_id:
-        fleet = get_object_or_404(Fleet, pk=fleet_id)
-        # Ensure the fleet belongs to this distributor
-        if fleet.distributor != user:
-            raise PermissionDenied("You do not own this fleet.")
-        # Save the item with the fleet
-        item = Item.objects.create(
-            serial_number=serializer.validated_data['serial_number'],
-            fleet=fleet
-        )
-        # If you allow many-to-many manufacturers:
-        item.manufacturers = serializer.validated_data.get('manufacturers')
-        item.save()
-    else:
-        # If you allow creating an item without a fleet, do so:
-        item = serializer.save()
+    # Start a transaction to ensure both item and encoder state are created or neither
+    from django.db import transaction
+    with transaction.atomic():
+        # Create the item
+        fleet_id = request.data.get('fleet_id')
+        if fleet_id:
+            fleet = get_object_or_404(Fleet, pk=fleet_id)
+            if fleet.distributor != user:
+                raise PermissionDenied("You do not own this fleet.")
+            item = Item.objects.create(
+                serial_number=serializer.validated_data['serial_number'],
+                fleet=fleet
+            )
+            item.manufacturers = serializer.validated_data.get('manufacturers')
+            item.save()
+        else:
+            item = Item.objects.create(
+                serial_number=serializer.validated_data['serial_number'],
+                manufacturers=serializer.validated_data.get('manufacturers')
+            )
+
+        # Create the encoder state if provided
+        encoder_state_data = serializer.validated_data.get('encoder_state')
+        if encoder_state_data:
+            EncoderState.objects.create(item=item, **encoder_state_data)
 
     return Response(
         ItemSerializer(item).data,
         status=status.HTTP_201_CREATED
     )
-
 
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])
@@ -436,19 +563,22 @@ def create_items_bulk_view(request):
     """
     POST /items/bulk_create/
     {
-      "items": [
-        {
-          "serial_number": "SERIAL001",
-          "fleet_id": 10,
-          "manufacturers": 1
-        },
-        {
-          "serial_number": "SERIAL002",
-          "fleet_id": 10
-        }
-      ]
+        "items": [
+            {
+                "serial_number": "SERIAL001",
+                "fleet_id": 10,
+                "manufacturers": 1,
+                "encoder_state": {
+                    "token_type": "type1",
+                    "token_value": "value1",
+                    "secret_key": "key123",
+                    "starting_code": "START001",
+                    "max_count": 100,
+                    "token": "token123"
+                }
+            }
+        ]
     }
-    Only a DISTRIBUTOR can bulk create items.
     """
     user = request.user
     if user.user_type != 'DISTRIBUTOR':
@@ -462,29 +592,28 @@ def create_items_bulk_view(request):
     errors = []
 
     for idx, item_data in enumerate(data):
-        # We can optionally pass partial data to our serializer
         serializer = ItemSerializer(data=item_data)
         if serializer.is_valid():
-            fleet_id = item_data.get('fleet_id')
-            if fleet_id:
-                fleet = get_object_or_404(Fleet, pk=fleet_id)
-                if fleet.distributor != user:
-                    errors.append({
-                        "index": idx,
-                        "error": "You do not own fleet_id={}".format(fleet_id)
-                    })
-                    continue
-                item_obj = Item.objects.create(
-                    serial_number=serializer.validated_data['serial_number'],
-                    fleet=fleet
-                )
-                item_obj.manufacturers = serializer.validated_data.get('manufacturers')
-                item_obj.save()
-            else:
-                # create item without fleet
-                item_obj = serializer.save()
+            try:
+                with transaction.atomic():
+                    fleet_id = item_data.get('fleet_id')
+                    if fleet_id:
+                        fleet = get_object_or_404(Fleet, pk=fleet_id)
+                        if fleet.distributor != user:
+                            raise PermissionDenied(f"You do not own fleet_id={fleet_id}")
 
-            created_items.append(ItemSerializer(item_obj).data)
+                        # Pass fleet to serializer's save method
+                        item_obj = serializer.save(fleet=fleet)
+                    else:
+                        # Create item without fleet
+                        item_obj = serializer.save()
+
+                created_items.append(ItemSerializer(item_obj).data)
+            except Exception as e:
+                errors.append({
+                    "index": idx,
+                    "error": str(e)
+                })
         else:
             errors.append({
                 "index": idx,

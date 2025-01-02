@@ -39,7 +39,26 @@ class Fleet(models.Model):
     def __str__(self):
         return f"{self.name} (Distributor: {self.distributor}, Agent: {self.assigned_agent})"
 
+class EncoderState(models.Model):
+    item = models.OneToOneField(
+        'Item',
+        on_delete=models.CASCADE,
+        related_name='encoder_state'
+    )
+    token_type = models.CharField(max_length=100)
+    token_value = models.CharField(max_length=255)
+    secret_key = models.CharField(max_length=255)
+    starting_code = models.CharField(max_length=100)
+    max_count = models.IntegerField()
+    token = models.CharField(max_length=255)
+    
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
 
+    def __str__(self):
+        return f"Encoder State for Item {self.item.serial_number}"
+    
+    
 class Item(models.Model):
 
     STATUS_CHOICES = [

@@ -1,6 +1,6 @@
 # serializers.py
 from rest_framework import serializers
-from .models import Manufacturer, Fleet, Item
+from .models import Manufacturer, Fleet, Item, EncoderState
 
 class ManufacturerSerializer(serializers.ModelSerializer):
     class Meta:
@@ -16,22 +16,37 @@ class FleetSerializer(serializers.ModelSerializer):
         read_only_fields = ['distributor', 'assigned_agent']
 
 
+class EncoderStateSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = EncoderState
+        fields = ['token_type', 'token_value', 'secret_key', 'starting_code', 'max_count', 'token']
+
 class ItemSerializer(serializers.ModelSerializer):
-    """
-    Serializer for creating/updating/reading Item objects.
-    We'll treat 'fleet' as read-only from a normal create endpoint,
-    since we have separate logic for assignment. 
-    But you can allow or disallow as you wish.
-    """
+    encoder_state = EncoderStateSerializer(required=False)
+    manufacturers = serializers.PrimaryKeyRelatedField(
+        queryset=Manufacturer.objects.all(),
+        required=False
+    )
+
     class Meta:
         model = Item
-        fields = [
-            'id', 
-            'serial_number', 
-            'fleet', 
-            'customer', 
-            'manufacturers',
-            'balance', 
-            'created_at'
-        ]
-        read_only_fields = ['fleet', 'customer', 'created_at', 'balance']
+        fields = ['serial_number', 'manufacturers', 'encoder_state']
+    
+    def create(self, validated_data):
+        encoder_state_data = validated_data.pop('encoder_state', None)
+        manufacturers = validated_data.pop('manufacturers', None)
+        fleet = self.context.get('fleet')  # Get fleet from context if needed
+
+        # Create the item
+        item = Item.objects.create(fleet=fleet, **validated_data)
+
+        # Set the manufacturers
+        if manufacturers:
+            item.manufacturers = manufacturers
+            item.save()
+
+        # Create encoder state if provided
+        if encoder_state_data:
+            EncoderState.objects.create(item=item, **encoder_state_data)
+
+        return item
