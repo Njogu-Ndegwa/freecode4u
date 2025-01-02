@@ -7,8 +7,8 @@ from items.models import Item
 class GeneratedCodeSerializer(serializers.ModelSerializer):
     class Meta:
         model = GeneratedCode
-        fields = ['id', 'item', 'code', 'days', 'payment_message', 'created_at']
-        read_only_fields = ['id', 'code', 'days', 'payment_message', 'created_at']
+        fields = ['id', 'item', 'token', 'token_value', 'token_type', 'max_count', 'payment_message', 'created_at']
+        read_only_fields = ['id', 'token', 'token_value', 'token_type', 'max_count', 'payment_message', 'created_at']
 
 
 class PaymentSerializer(serializers.ModelSerializer):

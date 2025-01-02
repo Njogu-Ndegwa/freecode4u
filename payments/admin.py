@@ -58,10 +58,10 @@ class GeneratedCodeAdmin(admin.ModelAdmin):
     """
     Admin interface for GeneratedCode model.
     """
-    list_display = ('code', 'item_serial_number', 'days', 'payment_message_excerpt', 'created_at')
-    search_fields = ('code', 'item__serial_number', 'payment_message__message')
-    list_filter = ('payment_message', 'days', 'created_at')
-    readonly_fields = ('code', 'created_at')
+    list_display = ('token', 'item_serial_number', 'token_value', 'payment_message_excerpt', 'created_at')
+    search_fields = ('token', 'item__serial_number', 'payment_message__message')
+    list_filter = ('payment_message', 'token_value', 'created_at')
+    readonly_fields = ('token', 'created_at')
     ordering = ('-created_at',)
 
     def item_serial_number(self, obj):

@@ -77,8 +77,10 @@ class GeneratedCode(models.Model):
         on_delete=models.CASCADE,
         related_name='generated_codes'
     )
-    code = models.CharField(max_length=20, unique=True)
-    days = models.IntegerField(null=True, blank=True)
+    token = models.CharField(max_length=20, unique=False)
+    token_value = models.IntegerField(null=True, blank=True)
+    token_type = models.CharField(max_length=20, null=True, blank=True)
+    max_count = models.CharField(max_length=20, null=True, blank=True)
     payment_message = models.ForeignKey(
         'PaymentMessage',
         on_delete=models.CASCADE,

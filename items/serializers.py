@@ -30,7 +30,15 @@ class ItemSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Item
-        fields = ['serial_number', 'manufacturers', 'encoder_state']
+        fields = [
+            'id',
+            'serial_number', 
+            'manufacturers', 
+            'encoder_state',
+            'status',
+            'payment_plan',
+            'created_at'
+            ]
     
     def create(self, validated_data):
         encoder_state_data = validated_data.pop('encoder_state', None)

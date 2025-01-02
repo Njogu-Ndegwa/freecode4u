@@ -39,18 +39,26 @@ class Fleet(models.Model):
     def __str__(self):
         return f"{self.name} (Distributor: {self.distributor}, Agent: {self.assigned_agent})"
 
+
 class EncoderState(models.Model):
+    TOKEN_TYPE_CHOICES = [
+        ("ADD_TIME", "ADD_TIME"),
+        ("SET_TIME", "SET_TIME"),
+        ("DISABLE_PAYG", "DISABLE_PAYG"),
+        ("COUNTER_SYNC", "COUNTER_SYNC"),
+    ]
+
     item = models.OneToOneField(
         'Item',
         on_delete=models.CASCADE,
         related_name='encoder_state'
     )
-    token_type = models.CharField(max_length=100)
-    token_value = models.CharField(max_length=255)
-    secret_key = models.CharField(max_length=255)
-    starting_code = models.CharField(max_length=100)
-    max_count = models.IntegerField()
-    token = models.CharField(max_length=255)
+    token_type = models.CharField(max_length=100, choices=TOKEN_TYPE_CHOICES, null=True, blank=True)
+    token_value = models.CharField(max_length=255, null=True, blank=True)
+    secret_key = models.CharField(max_length=255, null=True, blank=True)
+    starting_code = models.CharField(max_length=100, null=True, blank=True)
+    max_count = models.IntegerField(null=True, blank=True)
+    token = models.CharField(max_length=255, null=True, blank=True)
     
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
@@ -58,7 +66,7 @@ class EncoderState(models.Model):
     def __str__(self):
         return f"Encoder State for Item {self.item.serial_number}"
     
-    
+
 class Item(models.Model):
 
     STATUS_CHOICES = [
