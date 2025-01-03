@@ -42,7 +42,7 @@ jobs:
             # Start a new container with the updated image
             docker run -d \
             --name my-django-app \
-            -p 80:80 \
+            -p 8000:8000 \
             ${{ secrets.DOCKER_USERNAME }}/my-django-app:latest
         EOF
 
