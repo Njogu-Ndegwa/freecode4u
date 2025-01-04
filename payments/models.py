@@ -1,7 +1,7 @@
 
 from django.db import models
 from django.contrib.auth import get_user_model
-
+from utils.models import BaseModel
 User = get_user_model()
 
 # models.py
@@ -11,7 +11,7 @@ from django.contrib.auth import get_user_model
 
 User = get_user_model()
 
-class PaymentPlan(models.Model):
+class PaymentPlan(BaseModel):
     INTERVAL_TYPES = [
         ('hourly', 'Hourly'),
         ('daily', 'Daily'),
@@ -31,7 +31,6 @@ class PaymentPlan(models.Model):
     total_amount = models.DecimalField(max_digits=10, decimal_places=2)
     interval_type = models.CharField(max_length=50, choices=INTERVAL_TYPES)
     interval_amount = models.DecimalField(max_digits=10, decimal_places=2)
-    created_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:
         unique_together = ('distributor', 'name')  # Ensures unique names per distributor
@@ -42,7 +41,7 @@ class PaymentPlan(models.Model):
 
 
 
-class Payment(models.Model):
+class Payment(BaseModel):
     item = models.ForeignKey(
         'items.Item', 
         on_delete=models.CASCADE,
@@ -71,7 +70,7 @@ class Payment(models.Model):
                 f"{'with plan ' + self.payment_plan.name if self.payment_plan else ''}")
 
 
-class GeneratedCode(models.Model):
+class GeneratedCode(BaseModel):
     item = models.ForeignKey(
         'items.Item', 
         on_delete=models.CASCADE,
@@ -86,12 +85,11 @@ class GeneratedCode(models.Model):
         on_delete=models.CASCADE,
         related_name='generated_codes'
     )
-    created_at = models.DateTimeField(auto_now_add=True)
 
     def __str__(self):
         return f"Code {self.code} for Item {self.item.serial_number}"
 
-class PaymentMessage(models.Model):
+class PaymentMessage(BaseModel):
     message = models.TextField()
 
     def __str__(self):

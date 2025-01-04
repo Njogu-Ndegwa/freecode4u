@@ -1,6 +1,6 @@
 from django.db import models
 from django.contrib.auth.models import AbstractUser, BaseUserManager
-
+from utils.models import BaseModel
 
 class UserManager(BaseUserManager):
     use_in_migrations = True
@@ -56,7 +56,7 @@ class UserManager(BaseUserManager):
 #     class Meta:
 #         ordering = ['-created_at']
 
-class User(AbstractUser):
+class User(AbstractUser, BaseModel):
     USER_TYPES = (
         ('SUPER_ADMIN', 'Super Admin'),
         ('DISTRIBUTOR', 'Distributor'),
@@ -78,9 +78,6 @@ class User(AbstractUser):
     )
     is_active = models.BooleanField(default=True)
     email_verified = models.BooleanField(default=False)
-    created_at = models.DateTimeField(auto_now_add=True)
-    updated_at = models.DateTimeField(auto_now=True)
-
     # Manager
     objects = UserManager()
 

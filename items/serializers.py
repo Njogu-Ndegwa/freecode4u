@@ -5,21 +5,21 @@ from .models import Manufacturer, Fleet, Item, EncoderState
 class ManufacturerSerializer(serializers.ModelSerializer):
     class Meta:
         model = Manufacturer
-        fields = ['id', 'name', 'description', 'distributor']
+        fields = ['id', 'name', 'description', 'distributor', 'created_at', 'updated_at']
         read_only_fields = ['distributor']  # ensure the user can't override
 
 
 class FleetSerializer(serializers.ModelSerializer):
     class Meta:
         model = Fleet
-        fields = ['id', 'name', 'distributor', 'assigned_agent', 'description']
+        fields = ['id', 'name', 'distributor', 'assigned_agent', 'description', 'created_at', 'updated_at']
         read_only_fields = ['distributor', 'assigned_agent']
 
 
 class EncoderStateSerializer(serializers.ModelSerializer):
     class Meta:
         model = EncoderState
-        fields = ['token_type', 'token_value', 'secret_key', 'starting_code', 'max_count', 'token']
+        fields = ['token_type', 'token_value', 'secret_key', 'starting_code', 'max_count', 'token', 'created_at', 'updated_at']
 
 class ItemSerializer(serializers.ModelSerializer):
     encoder_state = EncoderStateSerializer(required=False)
@@ -37,7 +37,8 @@ class ItemSerializer(serializers.ModelSerializer):
             'encoder_state',
             'status',
             'payment_plan',
-            'created_at'
+            'created_at', 
+            'updated_at'
             ]
     
     def create(self, validated_data):

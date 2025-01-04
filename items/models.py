@@ -3,9 +3,10 @@ from django.db import models
 from django.contrib.auth import get_user_model
 from clients.models import Customer
 from decimal import Decimal
+from utils.models import BaseModel
 User = get_user_model()
 
-class Manufacturer(models.Model):
+class Manufacturer(BaseModel):
     name = models.CharField(max_length=100)
     description = models.TextField(blank=True)
     distributor = models.ForeignKey(
@@ -16,11 +17,12 @@ class Manufacturer(models.Model):
         related_name='manufacturers'
     )
 
+
     def __str__(self):
         return f"{self.name} (owned by {self.distributor.username})"
     
 
-class Fleet(models.Model):
+class Fleet(BaseModel):
     name = models.CharField(max_length=100, unique=True)
     distributor = models.ForeignKey(
         User,
@@ -40,7 +42,7 @@ class Fleet(models.Model):
         return f"{self.name} (Distributor: {self.distributor}, Agent: {self.assigned_agent})"
 
 
-class EncoderState(models.Model):
+class EncoderState(BaseModel):
     TOKEN_TYPE_CHOICES = [
         ("ADD_TIME", "ADD_TIME"),
         ("SET_TIME", "SET_TIME"),
@@ -59,15 +61,13 @@ class EncoderState(models.Model):
     starting_code = models.CharField(max_length=100, null=True, blank=True)
     max_count = models.IntegerField(null=True, blank=True)
     token = models.CharField(max_length=255, null=True, blank=True)
-    
-    created_at = models.DateTimeField(auto_now_add=True)
-    updated_at = models.DateTimeField(auto_now=True)
+
 
     def __str__(self):
         return f"Encoder State for Item {self.item.serial_number}"
     
 
-class Item(models.Model):
+class Item(BaseModel):
 
     STATUS_CHOICES = [
         ('pending', 'Pending'),
@@ -110,7 +110,6 @@ class Item(models.Model):
         related_name='item_payment_plan'
     )
 
-    created_at = models.DateTimeField(auto_now_add=True)
 
     def __str__(self):
         return f"Item {self.serial_number}"

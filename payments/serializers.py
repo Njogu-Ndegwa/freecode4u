@@ -7,8 +7,8 @@ from items.models import Item
 class GeneratedCodeSerializer(serializers.ModelSerializer):
     class Meta:
         model = GeneratedCode
-        fields = ['id', 'item', 'token', 'token_value', 'token_type', 'max_count', 'payment_message', 'created_at']
-        read_only_fields = ['id', 'token', 'token_value', 'token_type', 'max_count', 'payment_message', 'created_at']
+        fields = ['id', 'item', 'token', 'token_value', 'token_type', 'max_count', 'payment_message', 'created_at', 'updated_at']
+        read_only_fields = ['id', 'token', 'token_value', 'token_type', 'max_count', 'payment_message', 'created_at', 'updated_at']
 
 
 class PaymentSerializer(serializers.ModelSerializer):
@@ -25,8 +25,8 @@ class PaymentSerializer(serializers.ModelSerializer):
 class PaymentPlanSerializer(serializers.ModelSerializer):
     class Meta:
         model = PaymentPlan
-        fields = ['id', 'name', 'total_amount', 'interval_type', 'interval_amount', 'created_at']
-        read_only_fields = ['id', 'created_at']
+        fields = ['id', 'name', 'total_amount', 'interval_type', 'interval_amount', 'created_at', 'updated_at']
+        read_only_fields = ['id', 'created_at', 'updated_at']
 
 
 # serializers.py
@@ -59,8 +59,8 @@ class AssignPaymentPlanSerializer(serializers.Serializer):
 class CreatePaymentPlanSerializer(serializers.ModelSerializer):
     class Meta:
         model = PaymentPlan
-        fields = ['id', 'name', 'total_amount', 'interval_type', 'interval_amount', 'created_at']
-        read_only_fields = ['id', 'created_at']
+        fields = ['id', 'name', 'total_amount', 'interval_type', 'interval_amount', 'created_at', 'updated_at']
+        read_only_fields = ['id', 'created_at', 'updated_at']
 
     def validate_interval_type(self, value):
         allowed_types = [choice[0] for choice in PaymentPlan.INTERVAL_TYPES]

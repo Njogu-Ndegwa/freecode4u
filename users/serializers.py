@@ -156,7 +156,7 @@ class AgentRegistrationSerializer(serializers.ModelSerializer):
     
     class Meta:
         model = User
-        fields = ('email', 'password', 'first_name', 'last_name')
+        fields = ('email', 'password', 'first_name', 'last_name', 'created_at', 'updated_at')
 
     def create(self, validated_data):
         # Only distributor can create agents
@@ -179,7 +179,7 @@ class SuperAdminRegistrationSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = User
-        fields = ('username', 'email', 'password', 'first_name', 'last_name')
+        fields = ('username', 'email', 'password', 'first_name', 'last_name', 'created_at', 'updated_at')
 
     def create(self, validated_data):
         request = self.context.get('request')
