@@ -71,17 +71,31 @@ User = get_user_model()
 
 class LoginSerializer(TokenObtainPairSerializer):
     # We tell SimpleJWT which field to treat as the "username"
-    username_field = 'email'  
-
-    # Override the default fields so that DRF doesn’t expect "username"
+    username_field = 'email'
+    
+    # Override the default fields so that DRF doesn't expect "username"
     email = serializers.EmailField()
     password = serializers.CharField()
+
+    def get_token(self, user):
+        """
+        Override get_token to add custom claims to the token
+        Note: Changed from classmethod to instance method
+        """
+        token = super().get_token(user)
+
+        # Add custom claims
+        token.payload['username'] = user.username
+        token.payload['email'] = user.email
+        token.payload['user_type'] = user.user_type
+
+        return token
 
     def validate(self, attrs):
         """
         We override `validate()` so that we can:
-         1) authenticate by email + password
-         2) return the custom response payload (tokens + user info)
+        1) authenticate by email + password
+        2) return the custom response payload (tokens + user info)
         """
         # Collect credentials for `authenticate()`
         credentials = {
@@ -98,7 +112,7 @@ class LoginSerializer(TokenObtainPairSerializer):
             raise AuthenticationFailed("Account is disabled.")
 
         # Generate refresh/access tokens
-        refresh = self.get_token(user)  # get_token(...) is defined by TokenObtainPairSerializer
+        refresh = self.get_token(user)
 
         # Return the token + any extra user info
         data = {
@@ -110,7 +124,6 @@ class LoginSerializer(TokenObtainPairSerializer):
             'user_type': user.user_type,
         }
         return data
-    
 
 class UserSerializer(serializers.ModelSerializer):
     class Meta:

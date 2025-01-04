@@ -222,6 +222,81 @@ def make_payment_view(request):
             "error": str(e)
         }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def generate_token_view(request):
+    """
+    POST /payments/generate_token/
+    {
+      "item_id": <int>,
+      "token_type": "ADD_TIME" | "DISABLE_PAYG" | "SET_TIME" | "COUNTER_SYNC",
+      "token_value": <int>,  # Number of days for ADD_TIME, 1 for DISABLE_PAYG
+    }
+
+    Workflow:
+    1) Authenticate and authorize the user.
+    2) Validate the input data.
+    3) Retrieve the item and ensure ownership.
+    4) Retrieve the EncoderState for the item.
+    5) Call the external API to generate a token.
+    6) Update the EncoderState with the new token.
+    7) Create a GeneratedCode record for history.
+    8) Respond with the generated token and details.
+    """
+    user = request.user
+
+    # 1) Authenticate and authorize
+    if user.user_type not in ['DISTRIBUTOR', 'SUPER_ADMIN']:
+        raise PermissionDenied("You do not have permission to generate tokens.")
+
+    # 2) Validate input data
+    item_id = request.data.get('item_id')
+    token_type = request.data.get('token_type')
+    token_value = request.data.get('token_value')
+
+    if not item_id:
+        return Response({"detail": "item_id is required."}, status=status.HTTP_400_BAD_REQUEST)
+    if not token_type or token_type not in ["ADD_TIME", "DISABLE_PAYG", "SET_TIME", "COUNTER_SYNC"]:
+        return Response({"detail": "token_type must be either 'ADD_TIME' or 'DISABLE_PAYG' or SET_TIME or COUNTER_SYNC."}, status=status.HTTP_400_BAD_REQUEST)
+    if not token_value or not isinstance(token_value, int) or token_value <= 0:
+        return Response({"detail": "token_value must be a positive integer."}, status=status.HTTP_400_BAD_REQUEST)
+
+    # 3) Retrieve and validate the item
+    item = get_object_or_404(Item, pk=item_id)
+    if user.user_type == 'DISTRIBUTOR' and item.fleet.distributor != user:
+        raise PermissionDenied("You do not own this item (through its fleet).")
+
+    # 4) Retrieve the EncoderState for the item
+    encoder_state = get_object_or_404(EncoderState, item=item)
+
+    try:
+        # 5) Call the external API to generate a token
+        token_response = call_external_api(encoder_state, token_type, token_value)
+
+        # 6) Update the EncoderState with the new token
+        update_encoder_state(encoder_state, token_response)
+
+        # 7) Create a GeneratedCode record for history
+        payment_message, _ = PaymentMessage.objects.get_or_create(
+            defaults={'message': f"Token generated for {token_type}."}
+        )
+        generated_code = create_generated_code(item, token_response, payment_message)
+
+        # 8) Respond with the generated token and details
+        return Response({
+            "detail": "Token generated successfully.",
+            "token": generated_code.token,
+            "token_type": generated_code.token_type,
+            "token_value": generated_code.token_value,
+            "max_count": generated_code.max_count,
+        }, status=status.HTTP_200_OK)
+
+    except Exception as e:
+        return Response({
+            "detail": "An error occurred while generating the token.",
+            "error": str(e)
+        }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
 # @api_view(['POST'])
 # @permission_classes([IsAuthenticated])
 # def make_payment_view(request):
