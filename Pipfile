@@ -3,6 +3,7 @@ django = "*"
 djangorestframework = "*"
 djangorestframework-simplejwt = "*"
 requests = "*"
+django-cors-headers = "*"
 
 [dev-packages]
 
