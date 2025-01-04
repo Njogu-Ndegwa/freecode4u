@@ -18,15 +18,21 @@ User = get_user_model()
 @permission_classes([IsAuthenticated])
 def manufacturer_list_create_view(request):
     """
+    Endpoint: /manufacturers/
     GET: 
       - SUPER_ADMIN => all manufacturers
       - DISTRIBUTOR => only manufacturers where distributor=user
       - AGENT => only manufacturers where distributor=user.distributor
 
-    POST:
+    POST
       - DISTRIBUTOR => can create (owned by them)
       - SUPER_ADMIN => blocked (per your rules)
       - AGENT => blocked (read-only)
+
+    {
+        "name": "Manufacturer A",
+        "description": "The manufacturer creates items"
+    }
     """
     user = request.user
 
@@ -123,6 +129,7 @@ def manufacturer_detail_view(request, pk):
 @permission_classes([IsAuthenticated])
 def fleet_list_create_view(request):
     """
+    Endpoint: fleet/
     GET:
       - SUPER_ADMIN => all fleets
       - DISTRIBUTOR => only fleets they own
@@ -130,6 +137,11 @@ def fleet_list_create_view(request):
 
     POST:
       - Only a DISTRIBUTOR can create a fleet; assigned_agent is null by default
+
+    {
+    "name": "Catturd",
+    "description": "A Particular Fleet"
+    }
     """
     user = request.user
 
