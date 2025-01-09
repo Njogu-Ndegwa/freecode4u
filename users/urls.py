@@ -8,4 +8,5 @@ urlpatterns = [
     path('register/distributor/', views.register_distributor, name='register-distributor'),
     path('register/agent/', views.register_agent, name='register-agent'),
     path('register/superadmin/', views.register_super_admin, name='register_super_admin'),
+    path('distributor/agents/', views.get_agents_for_distributor, name='get_agents_for_distributor'),
 ]

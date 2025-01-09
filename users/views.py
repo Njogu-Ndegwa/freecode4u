@@ -14,7 +14,10 @@ from .serializers import (
     AgentRegistrationSerializer,
     SuperAdminRegistrationSerializer
 )
-
+from rest_framework.permissions import IsAuthenticated
+from rest_framework.exceptions import PermissionDenied
+from django.contrib.auth import get_user_model
+User = get_user_model()
 # @api_view(['POST'])
 # @permission_classes([AllowAny])
 # def login_view(request):
@@ -109,4 +112,21 @@ def register_super_admin(request):
         UserSerializer(user).data, 
         status=status.HTTP_201_CREATED
     )
+
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def get_agents_for_distributor(request):
+    """
+    Functional view to list all agents belonging to a distributor.
+    """
+    # Check if the user is a distributor
+    if request.user.user_type != 'DISTRIBUTOR':
+        raise PermissionDenied("Only distributors can view their agents.")
+
+    # Retrieve all agents associated with the current distributor
+    agents = User.objects.filter(distributor=request.user, user_type='AGENT')
+    serializer = UserSerializer(agents, many=True)
+
+    return Response(serializer.data)
 
