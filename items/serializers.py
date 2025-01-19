@@ -1,7 +1,7 @@
 # serializers.py
 from rest_framework import serializers
 from .models import Manufacturer, Fleet, Item, EncoderState
-from users.models import UserSerializer
+from users.serializers import UserSerializer
 
 class ManufacturerSerializer(serializers.ModelSerializer):
     class Meta:
