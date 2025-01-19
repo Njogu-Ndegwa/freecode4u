@@ -1,6 +1,7 @@
 # serializers.py
 from rest_framework import serializers
 from .models import Manufacturer, Fleet, Item, EncoderState
+from users.models import UserSerializer
 
 class ManufacturerSerializer(serializers.ModelSerializer):
     class Meta:
@@ -10,6 +11,7 @@ class ManufacturerSerializer(serializers.ModelSerializer):
 
 
 class FleetSerializer(serializers.ModelSerializer):
+    assigned_agent = UserSerializer(read_only=True)
     class Meta:
         model = Fleet
         fields = ['id', 'name', 'distributor', 'assigned_agent', 'description', 'created_at', 'updated_at']
