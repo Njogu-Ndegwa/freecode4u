@@ -2,6 +2,10 @@
 from rest_framework import serializers
 from .models import Manufacturer, Fleet, Item, EncoderState
 from users.serializers import UserSerializer
+from django.contrib.auth import get_user_model
+
+User = get_user_model()
+
 
 class ManufacturerSerializer(serializers.ModelSerializer):
     class Meta:
@@ -11,10 +15,18 @@ class ManufacturerSerializer(serializers.ModelSerializer):
 
 
 class FleetSerializer(serializers.ModelSerializer):
+    assigned_agent_id = serializers.PrimaryKeyRelatedField(
+        queryset=User.objects.filter(user_type='AGENT'),
+        source='assigned_agent',  # Maps to model field
+        write_only=True
+    )
     assigned_agent = UserSerializer(read_only=True)
     class Meta:
         model = Fleet
-        fields = ['id', 'name', 'distributor', 'assigned_agent', 'description', 'created_at', 'updated_at']
+        fields = [
+            'id', 'name', 'distributor', 
+            'assigned_agent', 'assigned_agent_id', 
+            'description', 'created_at', 'updated_at']
         read_only_fields = ['distributor', 'assigned_agent']
 
 

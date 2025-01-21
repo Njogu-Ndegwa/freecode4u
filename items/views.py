@@ -167,7 +167,7 @@ def fleet_list_create_view(request):
         serializer.is_valid(raise_exception=True)
 
         # Force the distributor to the current user
-        serializer.save(distributor=user, assigned_agent=None)
+        serializer.save(distributor=user)
 
         return Response(serializer.data, status=status.HTTP_201_CREATED)
 
