@@ -224,7 +224,9 @@ def fleet_detail_view(request, pk):
 
     elif request.method == 'DELETE':
         fleet.delete()
-        return Response(status=status.HTTP_204_NO_CONTENT)
+        return Response(
+            {'message': 'Fleet soft deleted successfully'},
+            status=status.HTTP_200_OK )
 
 
 @api_view(['POST'])
