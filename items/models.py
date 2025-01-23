@@ -55,7 +55,7 @@ class EncoderState(BaseModel):
         on_delete=models.CASCADE,
         related_name='encoder_state'
     )
-    token_type = models.CharField(max_length=100, choices=TOKEN_TYPE_CHOICES, null=True, blank=True)
+    token_type = models.CharField(max_length=100, choices=TOKEN_TYPE_CHOICES, null=True, blank=True) 
     token_value = models.CharField(max_length=255, null=True, blank=True)
     secret_key = models.CharField(max_length=255, null=True, blank=True)
     starting_code = models.CharField(max_length=100, null=True, blank=True)

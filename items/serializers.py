@@ -3,6 +3,9 @@ from rest_framework import serializers
 from .models import Manufacturer, Fleet, Item, EncoderState
 from users.serializers import UserSerializer
 from django.contrib.auth import get_user_model
+from clients.serializers import CustomerSerializer
+from payments.serializers import PaymentPlanSerializer
+
 
 User = get_user_model()
 
@@ -41,6 +44,11 @@ class ItemSerializer(serializers.ModelSerializer):
         queryset=Manufacturer.objects.all(),
         required=False
     )
+    fleet = serializers.PrimaryKeyRelatedField(
+        queryset=Fleet.objects.all(),
+        required=False,
+        write_only=True  # Optional: prevents showing PK in output
+    )
 
     class Meta:
         model = Item
@@ -49,27 +57,68 @@ class ItemSerializer(serializers.ModelSerializer):
             'serial_number', 
             'manufacturers', 
             'encoder_state',
+            'fleet',
+            'payment_plan',
+            'customer',
             'status',
             'payment_plan',
             'created_at', 
             'updated_at'
             ]
     
+    def validate_fleet(self, value):
+        """Ensure the user owns the fleet if provided"""
+        user = self.context['request'].user
+        if value and value.distributor != user:
+            raise serializers.ValidationError("You don't own this fleet.")
+        return value
+
+    def to_representation(self, instance):
+        data = super().to_representation(instance)
+        # Replace primary keys with nested representations
+        data['manufacturers'] = ManufacturerSerializer(instance.manufacturers).data if instance.manufacturers else None
+        data['customer'] = CustomerSerializer(instance.customer).data if instance.customer else None
+        data['payment_plan'] = PaymentPlanSerializer(instance.payment_plan).data if instance.payment_plan else None
+        data['fleet'] = FleetSerializer(instance.fleet).data if instance.fleet else None
+
+        return data
+    
     def create(self, validated_data):
+        """Handle nested creation and automatic distributor assignment"""
         encoder_state_data = validated_data.pop('encoder_state', None)
         manufacturers = validated_data.pop('manufacturers', None)
-        fleet = self.context.get('fleet')  # Get fleet from context if needed
+        
+        item = Item.objects.create(**validated_data)
 
-        # Create the item
-        item = Item.objects.create(fleet=fleet, **validated_data)
-
-        # Set the manufacturers
         if manufacturers:
             item.manufacturers = manufacturers
             item.save()
 
-        # Create encoder state if provided
         if encoder_state_data:
             EncoderState.objects.create(item=item, **encoder_state_data)
 
         return item
+
+    def update(self, instance, validated_data):
+        # Handle nested encoder_state
+        encoder_state_data = validated_data.pop('encoder_state', None)
+        
+        # Update main fields
+        instance = super().update(instance, validated_data)
+
+        # Update or create encoder state
+        if encoder_state_data is not None:
+            if instance.encoder_state:
+                # Update existing encoder state
+                encoder_state_serializer = EncoderStateSerializer(
+                    instance.encoder_state, 
+                    data=encoder_state_data,
+                    partial=self.partial
+                )
+                encoder_state_serializer.is_valid(raise_exception=True)
+                encoder_state_serializer.save()
+            else:
+                # Create new encoder state
+                EncoderState.objects.create(item=instance, **encoder_state_data)
+
+        return instance
