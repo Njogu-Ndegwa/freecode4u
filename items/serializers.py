@@ -46,7 +46,7 @@ class ItemSerializer(serializers.ModelSerializer):
     )
     fleet = serializers.PrimaryKeyRelatedField(
         queryset=Fleet.objects.all(),
-        required=False,
+        required=True,
         write_only=True  # Optional: prevents showing PK in output
     )
 
