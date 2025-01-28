@@ -100,25 +100,26 @@ class ItemSerializer(serializers.ModelSerializer):
         return item
 
     def update(self, instance, validated_data):
-        # Handle nested encoder_state
         encoder_state_data = validated_data.pop('encoder_state', None)
         
-        # Update main fields
+        # Update main fields first
         instance = super().update(instance, validated_data)
 
-        # Update or create encoder state
+        # Handle encoder state
         if encoder_state_data is not None:
-            if instance.encoder_state:
-                # Update existing encoder state
+            try:
+                # Try to get existing encoder state
+                encoder_state = instance.encoder_state
+                # Update existing
                 encoder_state_serializer = EncoderStateSerializer(
-                    instance.encoder_state, 
+                    encoder_state, 
                     data=encoder_state_data,
                     partial=self.partial
                 )
                 encoder_state_serializer.is_valid(raise_exception=True)
                 encoder_state_serializer.save()
-            else:
-                # Create new encoder state
+            except Item.encoder_state.RelatedObjectDoesNotExist:
+                # Create new encoder state if none exists
                 EncoderState.objects.create(item=instance, **encoder_state_data)
 
         return instance

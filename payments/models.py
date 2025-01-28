@@ -4,11 +4,6 @@ from django.contrib.auth import get_user_model
 from utils.models import BaseModel
 User = get_user_model()
 
-# models.py
-
-from django.db import models
-from django.contrib.auth import get_user_model
-
 User = get_user_model()
 
 class PaymentPlan(BaseModel):
@@ -38,7 +33,6 @@ class PaymentPlan(BaseModel):
 
     def __str__(self):
         return f"{self.name} ({self.interval_type}) by {self.distributor.username}"
-
 
 
 class Payment(BaseModel):

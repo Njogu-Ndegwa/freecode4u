@@ -20,5 +20,5 @@ urlpatterns = [
     path('items/assign_fleet/', views.assign_item_to_fleet_view, name='assign-item-fleet'),
     path('items/reassign_fleet/', views.reassign_item_to_fleet_view, name='reassign-item-fleet'),
     path('fleets/<int:fleet_id>/items/', views.get_items_in_fleet_view, name='fleet-items'),
-    path('items/<int:item_id>/buy/', views.buy_item_view, name='buy-item'),
+    path('items/assign_customer/', views.assign_customer_item_view, name='assign-customer-item-view'),
 ]

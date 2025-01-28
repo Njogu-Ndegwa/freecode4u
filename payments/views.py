@@ -644,6 +644,11 @@ def get_all_payment_plans(request):
 def assign_payment_plan_to_item(request):
     """
     Assign a PaymentPlan to an Item.
+
+    {
+    item_id: <int>
+    payment_plan_id: <int>
+    }
     """
     serializer = AssignPaymentPlanSerializer(data=request.data, context={'request': request})
     if not serializer.is_valid():
@@ -665,7 +670,9 @@ def assign_payment_plan_to_item(request):
     item.save()
 
     return Response({
-        "detail": f"PaymentPlan '{payment_plan.name}' has been assigned to Item '{item.serial_number}'."
+        "detail": "Item has been successfully assigned to a Payment Plan.",
+        "item_id": item.id,
+        "customer_id": payment_plan.id
     }, status=status.HTTP_200_OK)
 
 

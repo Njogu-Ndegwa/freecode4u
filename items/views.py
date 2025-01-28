@@ -777,11 +777,12 @@ def items_view(request):
 
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])
-def buy_item_view(request, item_id):
+def assign_customer_item_view(request):
     """
-    POST /items/<item_id>/buy/
+    POST /items/assign_customer/
     {
       "customer_id": <int>
+      "item_id": <int>
     }
 
     The item is "purchased" by a customer.
@@ -791,6 +792,7 @@ def buy_item_view(request, item_id):
     we do NOT allow transferring it to another customer.
     """
     user = request.user
+    item_id = request.data.get('item_id')
     if user.user_type != 'DISTRIBUTOR':
         raise PermissionDenied("Only a Distributor can assign an item to a customer.")
 

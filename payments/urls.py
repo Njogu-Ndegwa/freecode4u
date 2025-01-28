@@ -11,6 +11,6 @@ urlpatterns = [
     path('item/generate_token/', views.generate_token_view, name='get-payments-for-item'),
     path('distributors/<int:distributor_id>/payments/', views.get_payments_for_distributor, name='get-payments-for-distributor'),
     path('payment_plans/', views.get_all_payment_plans, name='get-all-payment-plans'),
-    path('payment_plans/assign_to_item/', views.assign_payment_plan_to_item, name='assign-payment-plan-to-item'),
+    path('items/assign_payment_plan/', views.assign_payment_plan_to_item, name='assign-payment-plan-to-item'),
     path('payment_plans/create/', views.create_payment_plan, name='create-payment-plan'),
 ]

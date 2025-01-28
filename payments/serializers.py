@@ -3,23 +3,13 @@
 from rest_framework import serializers
 from .models import GeneratedCode, Payment, PaymentPlan
 from items.models import Item 
-
+from clients.serializers import CustomerSerializer
 class GeneratedCodeSerializer(serializers.ModelSerializer):
     class Meta:
         model = GeneratedCode
         fields = ['id', 'item', 'token', 'token_value', 'token_type', 'max_count', 'payment_message', 'created_at', 'updated_at']
         read_only_fields = ['id', 'token', 'token_value', 'token_type', 'max_count', 'payment_message', 'created_at', 'updated_at']
 
-
-class PaymentSerializer(serializers.ModelSerializer):
-    payment_plan = serializers.StringRelatedField()  # Displays the payment plan name
-    customer = serializers.StringRelatedField()      # Displays the customer name
-    item = serializers.StringRelatedField()          # Displays the item serial number
-
-    class Meta:
-        model = Payment
-        fields = ['id', 'item', 'payment_plan', 'amount_paid', 'paid_at', 'customer', 'note']
-        read_only_fields = ['id',  'distributor', 'paid_at']
 
 
 class PaymentPlanSerializer(serializers.ModelSerializer):
@@ -29,6 +19,14 @@ class PaymentPlanSerializer(serializers.ModelSerializer):
         read_only_fields = ['id', 'created_at', 'updated_at']
 
 
+class PaymentSerializer(serializers.ModelSerializer):
+    payment_plan = PaymentPlanSerializer(read_only=True)  # Nested serializer
+    customer = CustomerSerializer(read_only=True)        # Nested serializer
+
+    class Meta:
+        model = Payment
+        fields = ['id','payment_plan', 'amount_paid', 'paid_at', 'customer', 'note']
+        read_only_fields = ['id', 'paid_at']  # Removed 'distributor' as it's not in fields
 # serializers.py
 
 class AssignPaymentPlanSerializer(serializers.Serializer):
