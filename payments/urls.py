@@ -13,4 +13,5 @@ urlpatterns = [
     path('payment_plans/', views.get_all_payment_plans, name='get-all-payment-plans'),
     path('items/assign_payment_plan/', views.assign_payment_plan_to_item, name='assign-payment-plan-to-item'),
     path('payment_plans/create/', views.create_payment_plan, name='create-payment-plan'),
+    path('payment_plans/<int:pk>/', views.payment_plan_detail_view, name='payment_plan_detail_view'),
 ]

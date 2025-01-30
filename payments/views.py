@@ -297,270 +297,6 @@ def generate_token_view(request):
             "error": str(e)
         }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
-# @api_view(['POST'])
-# @permission_classes([IsAuthenticated])
-# def make_payment_view(request):
-#     """
-#     POST /payments/make_payment/
-#     {
-#       "item_id": <int>,
-#       "amount": <decimal>,
-#       "note": "optional note"  // Optional
-#     }
-
-#     Workflow:
-#     1) Authenticate and authorize the user.
-#     2) Validate the input data.
-#     3) Retrieve the item and ensure ownership.
-#     4) Determine the PaymentPlan associated with the Item.
-#     5) Create a Payment record.
-#     6) Credit the item's balance.
-#     7) If PaymentPlan exists:
-#        - If balance >= interval_amount:
-#            a) Debit the balance by interval_amount.
-#            b) Generate a unique code.
-#            c) Respond with the generated code and remaining balance.
-#        - Else:
-#            a) Retain the balance.
-#            b) Respond indicating insufficient balance.
-#     8) If no PaymentPlan exists:
-#        - Respond indicating payment was recorded without triggering any plan logic.
-#     """
-
-#     user = request.user
-
-#     # 1) Authenticate and authorize
-#     if user.user_type not in ['DISTRIBUTOR', 'SUPER_ADMIN']:
-#         raise PermissionDenied("You do not have permission to make payments.")
-
-#     # 2) Validate input data
-#     item_id = request.data.get('item_id')
-#     amount_str = request.data.get('amount')
-#     if not item_id:
-#         return Response({"detail": "item_id is required."}, status=status.HTTP_400_BAD_REQUEST)
-#     if not amount_str:
-#         return Response({"detail": "amount is required."}, status=status.HTTP_400_BAD_REQUEST)
-#     try:
-#         amount = Decimal(amount_str)
-#         if amount <= 0:
-#             return Response({"detail": "amount must be a positive number."}, status=status.HTTP_400_BAD_REQUEST)
-#     except:
-#         return Response({"detail": "Invalid amount format."}, status=status.HTTP_400_BAD_REQUEST)
-
-#     note = request.data.get('note', '')
-
-#     # 3) Retrieve and validate the item
-#     item = get_object_or_404(Item, pk=item_id)
-
-#     if user.user_type == 'DISTRIBUTOR' and item.fleet.distributor != user:
-#         raise PermissionDenied("You do not own this item (through its fleet).")
-
-#     # Infer customer from item
-#     customer = item.customer  # Assuming item.customer is already set
-
-#     # 4) Determine PaymentPlan associated with the Item
-#     payment_plan = item.payment_plan  # Directly access via OneToOneField
-    
-#      # Calculate total paid so far
-#     total_paid = item.calculate_total_paid()
-#     will_complete_payment = (total_paid + amount) >= payment_plan.total_amount
-#     # 5) Process payment within a transaction for atomicity
-
-#     is_fully_paid = False
-#     if payment_plan and total_paid >= payment_plan.total_amount:
-#         is_fully_paid = True
-
-#     try:
-#         with transaction.atomic():
-#             # 5.1) Create the Payment record, associating with the PaymentPlan if it exists
-#             payment = Payment.objects.create(
-#                 item=item,
-#                 payment_plan=payment_plan,  # Associate with PaymentPlan if exists
-#                 amount_paid=amount,
-#                 customer=customer,
-#                 note=note
-#             )
-
-#             # 5.2) Credit the item's balance
-#             item.balance += amount
-#             item.save()
-            
-#             # 6) Apply PaymentPlan logic if PaymentPlan exists
-#             if payment_plan:
-#                 if is_fully_paid:
-#                     # 6.1) For fully paid items, just record the payment and balance
-#                     return Response({
-#                         "detail": "Payment recorded for fully paid item. No code generated.",
-#                         "current_balance": str(item.balance),
-#                         "status": item.status
-#                     }, status=status.HTTP_200_OK)
-#                 interval_amount = payment_plan.interval_amount
-#                 if will_complete_payment:
-                    
-#                     payment_message, _ = PaymentMessage.objects.get_or_create(
-#                         defaults={'message': "Congratulations! Full payment completed."}
-#                     )
-
-
-#                     encoder_state = EncoderState.objects.get(item=item)
-#                     api_url = "https://open-token.omnivoltaic.com/operate_token/"
-#                     payload = {
-#                         "token_type": "DISABLE_PAYG",
-#                         "token_value": 1,
-#                         "max_count": encoder_state.max_count,
-#                         "starting_code": encoder_state.starting_code,
-#                         "secret_key": encoder_state.secret_key,
-#                     }
-#                                         # 6.5) Make the API call to the external server
-#                     try:
-#                         response = requests.post(api_url, json=payload)
-#                         response.raise_for_status()  # Raise an exception for HTTP errors
-#                         token_response = response.json()
-
-#                         token = token_response.get("token")  # Extract the token from the response
-#                         token_type = token_response.get("token_type")  # Extract token_type
-#                         token_value = token_response.get("token_value")  # Extract token_value
-#                         max_count = token_response.get("max_count")  # Extract max_count
-#                     except requests.exceptions.RequestException as e:
-#                         # Handle API call errors
-#                         return Response({
-#                             "detail": "Failed to generate token via external API.",
-#                             "error": str(e)
-#                         }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
-
-#                     # 6.6) Update the EncoderState with the new token and other data
-#                     encoder_state.token = token
-#                     encoder_state.token_type = token_type
-#                     encoder_state.token_value = token_value
-#                     encoder_state.max_count = max_count
-#                     encoder_state.save()
-#                     payment_message, created = PaymentMessage.objects.get_or_create(
-#                         # Define your criteria for getting/creating a PaymentMessage
-#                         # Example: based on PaymentPlan or other attributes
-#                         defaults={'message': f"Code generated for {payment_plan.interval_type} usage."}
-#                     )
-
-#                     # 6.5) Create a GeneratedCode record
-#                     generated_code = GeneratedCode.objects.create(
-#                         item=item,
-#                         token=token,
-#                         token_value=token_value,
-#                         token_type = token_type,
-#                         max_count= max_count,
-#                         payment_message=payment_message
-#                     )
-
-#                     # Update status after generating completion code
-#                     item.update_status()
-
-#                     # Return early with completion code
-#                     return Response({
-#                         "detail": "Congratulations! Item fully paid.",
-#                         "completion_code": token,
-#                         "remaining_balance": str(item.balance),
-#                         "status": item.status,
-#                         "is_completion": True
-#                     }, status=status.HTTP_200_OK)
-                
-#                 if item.balance >= interval_amount:
-#                     # 6.1) Debit the balance by interval_amount
-#                     num_intervals = int(item.balance // interval_amount)
-#                     total_debit = interval_amount * num_intervals
-                    
-#                     # 6.2) Debit the balance by the total amount
-#                     item.balance -= total_debit
-#                     item.save()
-
-#                     # 6.3) Determine the number of days based on interval_type
-#                     interval_type_to_days = {
-#                         'hourly': 1 / 24,  # Fractional days, e.g., 1 hour = 1/24 day
-#                         'daily': 1,
-#                         'weekly': 7,
-#                         'monthly': 30,  # Approximate; adjust as needed
-#                         # Add more mappings if necessary
-#                     }
-#                     days = interval_type_to_days.get(payment_plan.interval_type.lower(), 1)
-                    
-#                     total_days = days * num_intervals
-#                     # 6.4) Create or retrieve a PaymentMessage
-
-#                     encoder_state = EncoderState.objects.get(item=item)
-#                     api_url = "https://open-token.omnivoltaic.com/operate_token/"
-#                     payload = {
-#                         "token_type": "ADD_TIME",
-#                         "token_value": total_days,
-#                         "max_count": encoder_state.max_count,
-#                         "starting_code": encoder_state.starting_code,
-#                         "secret_key": encoder_state.secret_key,
-#                     }
-#                                         # 6.5) Make the API call to the external server
-#                     try:
-#                         response = requests.post(api_url, json=payload)
-#                         response.raise_for_status()  # Raise an exception for HTTP errors
-#                         token_response = response.json()
-
-#                         token = token_response.get("token")  # Extract the token from the response
-#                         token_type = token_response.get("token_type")  # Extract token_type
-#                         token_value = token_response.get("token_value")  # Extract token_value
-#                         max_count = token_response.get("max_count")  # Extract max_count
-#                     except requests.exceptions.RequestException as e:
-#                         # Handle API call errors
-#                         return Response({
-#                             "detail": "Failed to generate token via external API.",
-#                             "error": str(e)
-#                         }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
-
-#                     # 6.6) Update the EncoderState with the new token and other data
-#                     encoder_state.token = token
-#                     encoder_state.token_type = token_type
-#                     encoder_state.token_value = token_value
-#                     encoder_state.max_count = max_count
-#                     encoder_state.save()
-#                     payment_message, created = PaymentMessage.objects.get_or_create(
-#                         # Define your criteria for getting/creating a PaymentMessage
-#                         # Example: based on PaymentPlan or other attributes
-#                         defaults={'message': f"Code generated for {payment_plan.interval_type} usage."}
-#                     )
-
-#                     # 6.5) Create a GeneratedCode record
-#                     generated_code = GeneratedCode.objects.create(
-#                         item=item,
-#                         token = token,
-#                         token_value = token_value,
-#                         token_type= token_type,
-#                         max_count = max_count,
-#                         payment_message=payment_message
-#                     )
-
-#                     # 6.6) Optionally, perform external API call here
-#                     # e.g., send_code_to_customer(generated_code)
-
-#                     # 6.7) Respond with the generated code and remaining balance
-#                     return Response({
-#                         "detail": "Payment successful, token generated via external API.",
-#                         "token": generated_code.token,
-#                         "days": generated_code.token_value,
-#                         "remaining_balance": str(item.balance)
-#                     }, status=status.HTTP_200_OK)
-#                 else:
-#                     # 6.8) Not enough balance to cover the interval amount
-#                     return Response({
-#                         "detail": "Payment added to item balance but not enough to cover plan cost. No code generated.",
-#                         "current_balance": str(item.balance)
-#                     }, status=status.HTTP_200_OK)
-#             else:
-#                 # 7) No PaymentPlan exists
-#                 return Response({
-#                     "detail": "Payment successful, but no PaymentPlan to apply."
-#                 }, status=status.HTTP_200_OK)
-
-#     except Exception as e:
-#         # Handle unexpected errors
-#         return Response({
-#             "detail": "An error occurred while processing the payment.",
-#             "error": str(e)
-#         }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
-
 
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
@@ -701,3 +437,65 @@ def create_payment_plan(request):
         "detail": f"PaymentPlan '{payment_plan.name}' has been created successfully.",
         "payment_plan": PaymentPlanSerializer(payment_plan).data
     }, status=status.HTTP_201_CREATED)
+
+
+@api_view(['GET', 'PUT', 'PATCH', 'DELETE'])
+@permission_classes([IsAuthenticated])
+def payment_plan_detail_view(request, pk):
+    """
+    GET/PUT/PATCH/DELETE for a single PaymentPlan by ID
+    
+    - SUPER_ADMIN: Full access to all plans
+    - DISTRIBUTOR: Full access to own plans
+    - AGENT: Read-only access to plans from their distributor
+    """
+    user = request.user
+    payment_plan = get_object_or_404(
+        PaymentPlan.objects.select_related('distributor'),
+        pk=pk
+    )
+
+    # Authorization checks
+    if user.user_type == 'SUPER_ADMIN':
+        pass  # Full access
+    elif user.user_type == 'DISTRIBUTOR':
+        if payment_plan.distributor != user:
+            raise PermissionDenied("You don't own this payment plan.")
+    elif user.user_type == 'AGENT':
+        if not user.distributor or user.distributor != payment_plan.distributor:
+            raise PermissionDenied("This plan isn't from your distributor.")
+    else:
+        raise PermissionDenied("Invalid user type for this operation.")
+
+    if request.method == 'GET':
+        serializer = PaymentPlanSerializer(payment_plan)
+        return Response(serializer.data)
+
+    # Modification operations require ownership or superadmin
+    if user.user_type not in ['SUPER_ADMIN', 'DISTRIBUTOR']:
+        raise PermissionDenied("You don't have modification permissions.")
+
+    if request.method in ['PUT', 'PATCH']:
+        serializer = PaymentPlanSerializer(
+            payment_plan,
+            data=request.data,
+            partial=(request.method == 'PATCH'),
+            context={'request': request}
+        )
+        serializer.is_valid(raise_exception=True)
+        
+        # Validate distributor changes for non-superadmins
+        if 'distributor' in serializer.validated_data and user.user_type != 'SUPER_ADMIN':
+            new_distributor = serializer.validated_data['distributor']
+            if new_distributor != payment_plan.distributor:
+                raise PermissionDenied("You cannot transfer payment plans to other distributors.")
+
+        serializer.save()
+        return Response(serializer.data)
+
+    elif request.method == 'DELETE':
+        payment_plan.delete()
+        return Response(
+            {'message': 'Payment plan deleted successfully'},
+            status=status.HTTP_200_OK
+        )

@@ -4,6 +4,15 @@ from rest_framework import serializers
 from .models import GeneratedCode, Payment, PaymentPlan
 from items.models import Item 
 from clients.serializers import CustomerSerializer
+
+
+class ItemSerializer(serializers.ModelSerializer):
+
+    class Meta:
+        model = Item
+        fields = ['id', 'serial_number']
+
+
 class GeneratedCodeSerializer(serializers.ModelSerializer):
     class Meta:
         model = GeneratedCode
@@ -22,10 +31,10 @@ class PaymentPlanSerializer(serializers.ModelSerializer):
 class PaymentSerializer(serializers.ModelSerializer):
     payment_plan = PaymentPlanSerializer(read_only=True)  # Nested serializer
     customer = CustomerSerializer(read_only=True)        # Nested serializer
-
+    item = ItemSerializer(read_only=True)
     class Meta:
         model = Payment
-        fields = ['id','payment_plan', 'amount_paid', 'paid_at', 'customer', 'note']
+        fields = ['id','payment_plan', 'item', 'amount_paid', 'paid_at', 'customer', 'note']
         read_only_fields = ['id', 'paid_at']  # Removed 'distributor' as it's not in fields
 # serializers.py
 
