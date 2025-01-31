@@ -1,6 +1,6 @@
 # views.py
 from rest_framework.decorators import api_view, permission_classes
-from rest_framework.permissions import IsAuthenticated
+from rest_framework.permissions import IsAuthenticated, AllowAny
 from rest_framework import status
 from rest_framework.response import Response
 from rest_framework.exceptions import PermissionDenied
@@ -302,3 +302,22 @@ def reassign_multiple_customers_view(request):
         "errors": errors
     }
     return Response(response_data, status=status.HTTP_200_OK)
+
+
+@api_view(['GET'])
+@permission_classes([AllowAny])
+def mac_address_view(request):
+    # Get MAC address from query parameters
+    mac_address = request.query_params.get('mac', None)
+    
+    if mac_address:
+        print(f"Received MAC address: {mac_address}")  # Prints to console
+        return Response(
+            {"status": "success", "mac_address": mac_address},
+            status=status.HTTP_200_OK
+        )
+    
+    return Response(
+        {"status": "error", "message": "MAC address not provided"},
+        status=status.HTTP_400_BAD_REQUEST
+    )

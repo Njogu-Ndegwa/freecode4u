@@ -334,20 +334,39 @@ def get_payments_for_item(request, item_id):
     return Response(serializer.data, status=status.HTTP_200_OK)
 
 
+# @api_view(['GET'])
+# @permission_classes([IsAuthenticated])
+# def get_payments_for_distributor(request, distributor_id):
+#     """
+#     Retrieve all Payments related to a specific Distributor.
+#     """
+#     distributor = get_object_or_404(User, pk=distributor_id, user_type='DISTRIBUTOR')
+
+#     # Permission Check: Only SUPER_ADMIN or the Distributor themselves can view their payments
+#     user = request.user
+#     if user.user_type != 'SUPER_ADMIN' and user != distributor:
+#         return Response({"detail": "You do not have permission to view payments for this distributor."}, status=status.HTTP_403_FORBIDDEN)
+
+#     payments = Payment.objects.filter(item__fleet__distributor=distributor).order_by('-paid_at')
+#     serializer = PaymentSerializer(payments, many=True)
+#     return Response(serializer.data, status=status.HTTP_200_OK)
+
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
-def get_payments_for_distributor(request, distributor_id):
+def get_payments_for_distributor(request):
     """
-    Retrieve all Payments related to a specific Distributor.
+    Retrieve all Payments related to the authenticated Distributor.
     """
-    distributor = get_object_or_404(User, pk=distributor_id, user_type='DISTRIBUTOR')
-
-    # Permission Check: Only SUPER_ADMIN or the Distributor themselves can view their payments
     user = request.user
-    if user.user_type != 'SUPER_ADMIN' and user != distributor:
-        return Response({"detail": "You do not have permission to view payments for this distributor."}, status=status.HTTP_403_FORBIDDEN)
 
-    payments = Payment.objects.filter(item__fleet__distributor=distributor).order_by('-paid_at')
+    # Ensure the user is a DISTRIBUTOR
+    if user.user_type != 'DISTRIBUTOR':
+        return Response(
+            {"detail": "You do not have permission to view payments."},
+            status=status.HTTP_403_FORBIDDEN
+        )
+
+    payments = Payment.objects.filter(item__fleet__distributor=user).order_by('-paid_at')
     serializer = PaymentSerializer(payments, many=True)
     return Response(serializer.data, status=status.HTTP_200_OK)
 
